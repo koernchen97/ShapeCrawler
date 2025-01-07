@@ -16,49 +16,49 @@ namespace ShapeCrawler.Presentations;
 
 internal sealed class PresentationCore
 {
-    private readonly PresentationDocument sdkPresDocument;
-    private readonly SlideSize slideSize;
+    private readonly PresentationDocument _sdkPresDocument;
+    private readonly SlideSize _slideSize;
 
     internal PresentationCore(byte[] bytes)
     {
         var stream = new MemoryStream();
         stream.Write(bytes, 0, bytes.Length);
         stream.Position = 0;
-        this.sdkPresDocument = PresentationDocument.Open(stream, true);
-        var sdkMasterParts = this.sdkPresDocument.PresentationPart!.SlideMasterParts;    
+        this._sdkPresDocument = PresentationDocument.Open(stream, true);
+        var sdkMasterParts = this._sdkPresDocument.PresentationPart!.SlideMasterParts;    
         this.SlideMasters = new SlideMasterCollection(sdkMasterParts);
-        this.Sections = new Sections(this.sdkPresDocument);
-        this.Slides = new Slides(this.sdkPresDocument.PresentationPart);
+        this.Sections = new Sections(this._sdkPresDocument);
+        this.Slides = new Slides(this._sdkPresDocument.PresentationPart);
         this.Footer = new Footer(this);
-        this.slideSize = new SlideSize(this.sdkPresDocument.PresentationPart!.Presentation.SlideSize!);
-        this.FileProperties = new(this.sdkPresDocument.CoreFilePropertiesPart!);
+        this._slideSize = new SlideSize(this._sdkPresDocument.PresentationPart!.Presentation.SlideSize!);
+        this.FileProperties = new(this._sdkPresDocument.CoreFilePropertiesPart!);
     }
 
     internal PresentationCore(Stream stream)
     {
         stream.Position = 0;
-        this.sdkPresDocument = PresentationDocument.Open(stream, true);
-        var sdkMasterParts = this.sdkPresDocument.PresentationPart!.SlideMasterParts;
+        this._sdkPresDocument = PresentationDocument.Open(stream, true);
+        var sdkMasterParts = this._sdkPresDocument.PresentationPart!.SlideMasterParts;
         this.SlideMasters = new SlideMasterCollection(sdkMasterParts);
-        this.Sections = new Sections(this.sdkPresDocument);
-        this.Slides = new Slides(this.sdkPresDocument.PresentationPart);
+        this.Sections = new Sections(this._sdkPresDocument);
+        this.Slides = new Slides(this._sdkPresDocument.PresentationPart);
         this.Footer = new Footer(this);
-        this.slideSize = new SlideSize(this.sdkPresDocument.PresentationPart!.Presentation.SlideSize!);
-        this.FileProperties = new(this.sdkPresDocument.CoreFilePropertiesPart!);
+        this._slideSize = new SlideSize(this._sdkPresDocument.PresentationPart!.Presentation.SlideSize!);
+        this.FileProperties = new(this._sdkPresDocument.CoreFilePropertiesPart!);
     }
 
     internal ISlides Slides { get; }
 
     internal decimal SlideHeight
     {
-        get => this.slideSize.Height();
-        set => this.slideSize.UpdateHeight(value);
+        get => this._slideSize.Height();
+        set => this._slideSize.UpdateHeight(value);
     }
 
     internal decimal SlideWidth
     {
-        get => this.slideSize.Width();
-        set => this.slideSize.UpdateWidth(value);
+        get => this._slideSize.Width();
+        set => this._slideSize.UpdateWidth(value);
     }
 
     internal ISlideMasterCollection SlideMasters { get; }
@@ -72,20 +72,20 @@ internal sealed class PresentationCore
     internal void CopyTo(string path)
     {
         this.FileProperties.Modified = ShapeCrawlerInternal.TimeProvider.UtcNow;
-        var cloned = this.sdkPresDocument.Clone(path);
+        var cloned = this._sdkPresDocument.Clone(path);
         cloned.Dispose();
     }
 
     internal void CopyTo(Stream stream)
     {
         this.FileProperties.Modified = ShapeCrawlerInternal.TimeProvider.UtcNow;
-        this.sdkPresDocument.Clone(stream);
+        this._sdkPresDocument.Clone(stream);
     }
 
     internal byte[] AsByteArray()
     {
         var stream = new MemoryStream();
-        this.sdkPresDocument.Clone(stream);
+        this._sdkPresDocument.Clone(stream);
 
         return stream.ToArray();
     }
@@ -101,7 +101,7 @@ internal sealed class PresentationCore
                 "The 'mod' attribute is not declared.",
                 "The element has unexpected child element 'http://schemas.openxmlformats.org/drawingml/2006/main:noFill'."
         };
-        var sdkErrors = new OpenXmlValidator(FileFormatVersions.Microsoft365).Validate(this.sdkPresDocument);
+        var sdkErrors = new OpenXmlValidator(FileFormatVersions.Microsoft365).Validate(this._sdkPresDocument);
         sdkErrors = sdkErrors.Where(errorInfo => !nonCriticalErrorDesc.Contains(errorInfo.Description));
         sdkErrors = sdkErrors.DistinctBy(x => new { x.Description, x.Path?.XPath }).ToList();
 
@@ -110,8 +110,8 @@ internal sealed class PresentationCore
             throw new SCException("Presentation is invalid.");
         }
         
-        var errors = this.ValidateATableRows(this.sdkPresDocument);
-        errors = errors.Concat(this.ValidateASolidFill(this.sdkPresDocument));
+        var errors = this.ValidateATableRows(this._sdkPresDocument);
+        errors = errors.Concat(this.ValidateASolidFill(this._sdkPresDocument));
         if (errors.Any())
         {
             throw new SCException("Presentation is invalid.");
