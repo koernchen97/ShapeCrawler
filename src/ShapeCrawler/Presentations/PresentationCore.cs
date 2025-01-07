@@ -25,7 +25,7 @@ internal sealed class PresentationCore
         stream.Write(bytes, 0, bytes.Length);
         stream.Position = 0;
         this._sdkPresDocument = PresentationDocument.Open(stream, true);
-        var sdkMasterParts = this._sdkPresDocument.PresentationPart!.SlideMasterParts;    
+        var sdkMasterParts = this._sdkPresDocument.PresentationPart!.SlideMasterParts;
         this.SlideMasters = new SlideMasterCollection(sdkMasterParts);
         this.Sections = new Sections(this._sdkPresDocument);
         this.Slides = new Slides(this._sdkPresDocument.PresentationPart);
@@ -92,24 +92,18 @@ internal sealed class PresentationCore
 
     internal void Validate()
     {
-        var nonCriticalErrorDesc = new List<string>
-        {
-                "The element has unexpected child element 'http://schemas.openxmlformats.org/drawingml/2006/chart:showDLblsOverMax'.",
-                "The element has invalid child element 'http://schemas.microsoft.com/office/drawing/2017/03/chart:dataDisplayOptions16'. List of possible elements expected: <http://schemas.microsoft.com/office/drawing/2017/03/chart:dispNaAsBlank>.",
-                "The 'uri' attribute is not declared.",
-                "The 'mod' attribute is not declared.",
-                "The 'mod' attribute is not declared.",
-                "The element has unexpected child element 'http://schemas.openxmlformats.org/drawingml/2006/main:noFill'."
-        };
-        var sdkErrors = new OpenXmlValidator(FileFormatVersions.Microsoft365).Validate(this._sdkPresDocument);
-        sdkErrors = sdkErrors.Where(errorInfo => !nonCriticalErrorDesc.Contains(errorInfo.Description));
-        sdkErrors = sdkErrors.DistinctBy(x => new { x.Description, x.Path?.XPath }).ToList();
+        var nonCriticalErrors = ValidationConfig.NonCriticalErrors;
+        var validator = new FilteredOpenXmlValidator(nonCriticalErrors);
+
+        var sdkErrors = validator.Validate(this._sdkPresDocument)
+                                 .DistinctBy(error => new { error.Description, error.Path?.XPath })
+                                 .ToList();
 
         if (sdkErrors.Any())
         {
             throw new SCException("Presentation is invalid.");
         }
-        
+
         var errors = this.ValidateATableRows(this._sdkPresDocument);
         errors = errors.Concat(this.ValidateASolidFill(this._sdkPresDocument));
         if (errors.Any())
@@ -153,7 +147,7 @@ internal sealed class PresentationCore
             }
         }
     }
-    
+
     private IEnumerable<string> ValidateASolidFill(PresentationDocument presDocument)
     {
         var aText = presDocument.PresentationPart!.SlideParts
@@ -164,8 +158,8 @@ internal sealed class PresentationCore
         foreach (var text in aText)
         {
             var runProperties = text.Parent!.GetFirstChild<A.RunProperties>();
-            
-            if ((runProperties?.Descendants<A.SolidFill>()?.Any() ?? false) 
+
+            if ((runProperties?.Descendants<A.SolidFill>()?.Any() ?? false)
                 && runProperties.ChildElements.Take(2).All(x => x is not A.SolidFill))
             {
                 yield return $"Invalid solid fill structure: SolidFill element must be index 0";
